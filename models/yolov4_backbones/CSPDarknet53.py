@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 
+from ..layers import Conv_Bn_Activation
+
 
 class ResBlock(nn.Module):
     """
