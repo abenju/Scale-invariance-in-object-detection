@@ -1,9 +1,10 @@
+import torch
 from torch import nn
 
 from .layers import Conv_Bn_Activation, Upsample
 
 
-class PanNeck(nn.Module):
+class PanNeck(nn.Module):  # TODO: do more elegantly
     def __init__(self, inference=False):
         super().__init__()
         self.inference = inference
@@ -43,3 +44,45 @@ class PanNeck(nn.Module):
         self.conv18 = Conv_Bn_Activation(256, 128, 1, 1, 'leaky')
         self.conv19 = Conv_Bn_Activation(128, 256, 3, 1, 'leaky')
         self.conv20 = Conv_Bn_Activation(256, 128, 1, 1, 'leaky')
+
+    def forward(self, input, downsample4, downsample3, inference=False):
+        x1 = self.conv1(input)
+        x2 = self.conv2(x1)
+        x3 = self.conv3(x2)
+        # SPP
+        m1 = self.maxpool1(x3)
+        m2 = self.maxpool2(x3)
+        m3 = self.maxpool3(x3)
+        spp = torch.cat([m3, m2, m1, x3], dim=1)
+        # SPP end
+        x4 = self.conv4(spp)
+        x5 = self.conv5(x4)
+        x6 = self.conv6(x5)
+        x7 = self.conv7(x6)
+        # UP
+        up = self.upsample1(x7, downsample4.size(), self.inference)
+        # R 85
+        x8 = self.conv8(downsample4)
+        # R -1 -3
+        x8 = torch.cat([x8, up], dim=1)
+
+        x9 = self.conv9(x8)
+        x10 = self.conv10(x9)
+        x11 = self.conv11(x10)
+        x12 = self.conv12(x11)
+        x13 = self.conv13(x12)
+        x14 = self.conv14(x13)
+
+        # UP
+        up = self.upsample2(x14, downsample3.size(), self.inference)
+        # R 54
+        x15 = self.conv15(downsample3)
+        # R -1 -3
+        x15 = torch.cat([x15, up], dim=1)
+
+        x16 = self.conv16(x15)
+        x17 = self.conv17(x16)
+        x18 = self.conv18(x17)
+        x19 = self.conv19(x18)
+        x20 = self.conv20(x19)
+        return x20, x13, x6

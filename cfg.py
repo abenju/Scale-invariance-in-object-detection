@@ -18,13 +18,13 @@ _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 Cfg = EasyDict()
 
-Cfg.use_darknet_cfg = True
+Cfg.use_darknet_cfg = False
 Cfg.cfgfile = os.path.join(_BASE_DIR, 'cfg', 'yolov4.cfg')
 
-Cfg.batch = 64
-Cfg.subdivisions = 16
-Cfg.width = 608
-Cfg.height = 608
+Cfg.batch = 1
+Cfg.subdivisions = 1
+Cfg.width = 512
+Cfg.height = 512
 Cfg.channels = 3
 Cfg.momentum = 0.949
 Cfg.decay = 0.0005
@@ -54,8 +54,8 @@ Cfg.blur = 0
 Cfg.gaussian = 0
 Cfg.boxes = 60  # box num
 Cfg.TRAIN_EPOCHS = 300
-Cfg.train_label = os.path.join(_BASE_DIR, 'data', 'train.txt')
-Cfg.val_label = os.path.join(_BASE_DIR, 'data' ,'val.txt')
+Cfg.train_label = os.path.join(_BASE_DIR, 'data', 'val.txt')
+Cfg.val_label = os.path.join(_BASE_DIR, 'data', 'val.txt')
 Cfg.TRAIN_OPTIMIZER = 'adam'
 '''
 image_path1 x1,y1,x2,y2,id x1,y1,x2,y2,id x1,y1,x2,y2,id ...
