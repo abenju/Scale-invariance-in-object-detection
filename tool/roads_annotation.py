@@ -40,7 +40,7 @@ for videoname in tqdm(database.keys()):
     for frame_id in database[videoname]['frames']:
 
         frame = database[videoname]['frames'][frame_id]
-        if frame['annotated'] > 0 and (not ignore_unannotated or len(frame['annos'] > 0)): # filter frames
+        if frame['annotated'] > 0 and (not ignore_unannotated or len(frame['annos']) > 0):  # filter frames
             file_name = "{:08}.jpg".format(int(frame_id))
             file_path = os.path.join(images_dir_path, videoname, file_name)
 
