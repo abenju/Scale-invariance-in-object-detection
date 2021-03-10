@@ -3,21 +3,24 @@ from collections import defaultdict
 from tqdm import tqdm
 import os
 import math
+import random
 
 """hyper parameters"""
+ignore_unannotated = True
+
 json_file_path = 'D:/Downloads/annots_12fps_full_v1.01111.json'
 images_dir_path = 'D:/Downloads/rgb-images'
-output_path = '../data/roads.txt'
-subsets = ['all']
+output_train_path = '../data/roads_train.txt'
+output_test_path = '../data/roads_test.txt'
+output_val_path = '../data/roads_val.txt'
 
+split_ratios = {
+    output_train_path: 0.7,
+    output_test_path: 0.15,
+    output_val_path: 0.15,
+}
 
-def is_part_of_subsets(split_ids, SUBSETS):
-    is_it = False
-    for subset in SUBSETS:
-        if subset in split_ids:
-            is_it = True
-
-    return is_it
+random.seed(4)
 
 
 """load json file"""
@@ -29,27 +32,21 @@ with open(json_file_path, encoding='utf-8') as f:
 database = data['db']
 
 lines = []
+frames = []
 
-for videoname in tqdm(sorted(database.keys())):
-    if not is_part_of_subsets(data['db'][videoname]['split_ids'], subsets):
-        continue
 
-    #numf = database[videoname]['numf']
-    frames = database[videoname]['frames']
-    frame_nums = [int(f) for f in frames.keys()]
+"""Etract all annotations into a list"""
+for videoname in tqdm(database.keys()):
+    for frame_id in database[videoname]['frames']:
 
-    for frame_num in sorted(frame_nums):
-        line = []
-        frame_id = str(frame_num)
-        frame_file_id = "{:08}".format(frame_num)
-        if frame_id in frames.keys() and frames[frame_id]['annotated'] > 0:
+        frame = database[videoname]['frames'][frame_id]
+        if frame['annotated'] > 0 and (not ignore_unannotated or len(frame['annos'] > 0)):
+            file_name = "{:08}.jpg".format(int(frame_id))
+            file_path = os.path.join(images_dir_path, videoname, file_name)
 
-            path = os.path.join(images_dir_path, videoname, frame_file_id)
-            line.append(path)
-
-            frame = frames[frame_id]
             width, height = frame['width'], frame['height']
             frame_annos = frame['annos']
+            annotations = []
             for key in frame_annos:
                 anno = frame_annos[key]
                 box = anno['box']
@@ -60,13 +57,24 @@ for videoname in tqdm(sorted(database.keys())):
 
                 label = anno['agent_ids'][0]
                 box_info = " %d,%d,%d,%d,%d" % (x1, y1, x2, y2, label)
-                line.append(box_info)
-            lines.append(line)
+                annotations.append(box_info)
+            frames.append([file_path] + annotations )
+
+
+"""Shuffle and split data"""
+random.shuffle(frames)
+prev_index = 0
+splits = []
+for path, ratio in split_ratios.items():
+   next_index = prev_index + math.ceil(len(frames)*ratio)
+   splits.append((path, frames[prev_index:next_index]))
+   prev_index = next_index
 
 
 """write to txt"""
-with open(output_path, 'w') as f:
-    for line in tqdm(lines):
-        for item in line:
-            f.write(item)
-        f.write('\n')
+for split in splits:
+    with open(split[0], 'w') as f:
+        for line in tqdm(split[1]):
+            for item in line:
+                f.write(item)
+            f.write('\n')
