@@ -31,16 +31,16 @@ with open(json_file_path, encoding='utf-8') as f:
 
 database = data['db']
 
+
 lines = []
 frames = []
-
 
 """Etract all annotations into a list"""
 for videoname in tqdm(database.keys()):
     for frame_id in database[videoname]['frames']:
 
         frame = database[videoname]['frames'][frame_id]
-        if frame['annotated'] > 0 and (not ignore_unannotated or len(frame['annos'] > 0)):
+        if frame['annotated'] > 0 and (not ignore_unannotated or len(frame['annos'] > 0)): # filter frames
             file_name = "{:08}.jpg".format(int(frame_id))
             file_path = os.path.join(images_dir_path, videoname, file_name)
 
@@ -58,7 +58,7 @@ for videoname in tqdm(database.keys()):
                 label = anno['agent_ids'][0]
                 box_info = " %d,%d,%d,%d,%d" % (x1, y1, x2, y2, label)
                 annotations.append(box_info)
-            frames.append([file_path] + annotations )
+            frames.append([file_path] + annotations)  # All frames in same list to shuffle (only relevant annotation)
 
 
 """Shuffle and split data"""
@@ -72,7 +72,7 @@ for path, ratio in split_ratios.items():
 
 
 """write to txt"""
-for split in splits:
+for split in splits:  # Write multiple files
     with open(split[0], 'w') as f:
         for line in tqdm(split[1]):
             for item in line:
