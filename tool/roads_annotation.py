@@ -14,7 +14,7 @@ output_train_path = '../data/roads_train.txt'
 output_test_path = '../data/roads_test.txt'
 output_val_path = '../data/roads_val.txt'
 
-split_ratios = {
+split_ratios = {  # ratios to split entire dataset. Values must equal sum up to 1
     output_train_path: 0.7,
     output_test_path: 0.15,
     output_val_path: 0.15,

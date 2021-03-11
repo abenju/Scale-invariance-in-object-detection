@@ -403,7 +403,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
             if cfg.use_darknet_cfg:
                 eval_model = Darknet(cfg.cfgfile, inference=True)
             else:
-                eval_model = Yolov4(cfg.pretrained, n_classes=cfg.classes, inference=True)
+                eval_model = Yolov4.Yolov4(cfg.pretrained, n_classes=cfg.classes, inference=True)
             # eval_model = Yolov4(yolov4conv137weight=None, n_classes=config.classes, inference=True)
             if torch.cuda.device_count() > 1:
                 eval_model.load_state_dict(model.module.state_dict())
@@ -431,7 +431,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
                 try:
                     # os.mkdir(config.checkpoints)
                     os.makedirs(config.checkpoints, exist_ok=True)
-                    logging.info('Created checkpoint directory')
+                    logging.info('Created checkpoints directory')
                 except OSError:
                     pass
                 save_path = os.path.join(config.checkpoints, f'{save_prefix}{epoch + 1}.pth')
@@ -540,7 +540,7 @@ def get_args(**kwargs):
         help='iou type (iou, giou, diou, ciou)',
         dest='iou_type')
     parser.add_argument(
-        '-keep-checkpoint-max', type=int, default=10,
+        '-keep-checkpoints-max', type=int, default=10,
         help='maximum number of checkpoints to keep. If set 0, all checkpoints will be kept',
         dest='keep_checkpoint_max')
     args = vars(parser.parse_args())

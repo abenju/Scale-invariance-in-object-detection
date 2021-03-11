@@ -17,9 +17,9 @@ import os
 
 """hyper parameters"""
 #json_file_path = 'E:/Dataset/mscoco2017/annotations/instances_train2017.json'
-json_file_path = 'D:/Documents/datasets/coco/annotations_trainval2017/annotations/instances_val2017.json'
-images_dir_path = 'D:/Documents/datasets/coco/val2017/'
-output_path = '../data/val.txt'
+json_file_path = 'D:/Documents/datasets/coco/annotations_trainval2017/annotations/instances_train2017.json'
+images_dir_path = 'D:/Documents/datasets/coco/train2017/'
+output_path = '../data/train.txt'
 
 """load json file"""
 name_box_id = defaultdict(list)

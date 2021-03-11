@@ -391,7 +391,8 @@ class Yolo_dataset(Dataset):
         """
         img_path = self.imgs[index]
         bboxes_with_cls_id = np.array(self.truth.get(img_path), dtype=np.float)
-        img = cv2.imread(os.path.join(self.cfg.dataset_dir, img_path))
+        #img = cv2.imread(os.path.join(self.cfg.dataset_dir, img_path))
+        img = cv2.imread(img_path)
         # img_height, img_width = img.shape[:2]
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         # img = cv2.resize(img, (self.cfg.w, self.cfg.h))
@@ -423,11 +424,21 @@ def get_image_id(filename:str) -> int:
     >>> no = f"{int(no):04d}"
     >>> return int(lv+no)
     """
-    raise NotImplementedError("Create your own 'get_image_id' function")
-    lv, no = os.path.splitext(os.path.basename(filename))[0].split("_")
-    lv = lv.replace("level", "")
-    no = f"{int(no):04d}"
-    return int(lv+no)
+
+    return get_image_id_coco(filename)
+
+    # raise NotImplementedError("Create your own 'get_image_id' function")
+    # lv, no = os.path.splitext(os.path.basename(filename))[0].split("_")
+    # lv = lv.replace("level", "")
+    # no = f"{int(no):04d}"
+    # return int(lv+no)
+
+
+def get_image_id_coco(filename):
+    fname = os.path.basename(filename)
+    id = int(fname.replace('.jpg', ''))
+    return id
+
 
 
 if __name__ == "__main__":
