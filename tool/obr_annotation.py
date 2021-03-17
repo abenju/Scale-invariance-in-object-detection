@@ -11,9 +11,11 @@ image_dirs_name = "img"
 annotation_dirs_name = "ann"
 accepted_labels = {  # matches a string to a class id. helpful to deal with one class being referred by multiple names
     'blue': 0,
+    'blue_yolo': 0,
     'yellow': 1,
-    'yolo_yellow': 1,
+    'yellow_yolo': 1,
     'orange': 2,
+    'orange_yolo': 2,
     'big_orange': 3,
     'big orange': 3,
 }

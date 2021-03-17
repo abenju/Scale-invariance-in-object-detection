@@ -21,6 +21,8 @@ import torch
 from torch.utils.data.dataset import Dataset
 
 
+GLOBAL_IMG_ID = 0
+
 def rand_uniform_strong(min, max):
     if min > max:
         swap = min
@@ -258,7 +260,7 @@ class Yolo_dataset(Dataset):
             data = line.split(" ")
             truth[data[0]] = []
             for i in data[1:]:
-                truth[data[0]].append([int(float(j)) for j in i.split(',')])
+                truth[data[0]].append([int(float(j)) for j in i.split(',')])  # Directories must NOT have spaces or this breaks
 
         self.truth = truth
         self.imgs = list(self.truth.keys())
@@ -425,7 +427,8 @@ def get_image_id(filename:str) -> int:
     >>> return int(lv+no)
     """
 
-    return get_image_id_coco(filename)
+    #return get_image_id_coco(filename)
+    return get_image_id_global(filename)
 
     # raise NotImplementedError("Create your own 'get_image_id' function")
     # lv, no = os.path.splitext(os.path.basename(filename))[0].split("_")
@@ -439,6 +442,13 @@ def get_image_id_coco(filename):
     id = int(fname.replace('.jpg', ''))
     return id
 
+
+def get_image_id_global(filename):  # TODO: this is flawed. breaks after epoch 2. Will include image id in file format
+    """requires a global id in place"""
+    del filename
+    global GLOBAL_IMG_ID
+    GLOBAL_IMG_ID += 1
+    return GLOBAL_IMG_ID
 
 
 if __name__ == "__main__":
