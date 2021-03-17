@@ -33,7 +33,11 @@ annotations = data['annotations']
 for ant in tqdm(annotations):
     id = ant['image_id']
     # name = os.path.join(images_dir_path, images[id]['file_name'])
-    name = os.path.join(images_dir_path, '{:012d}.jpg'.format(id))
+
+    if id not in id_name:  # img id to file path
+        name = os.path.join(images_dir_path, '{:012d}.jpg'.format(id))
+        id_name[id] = name
+
     cat = ant['category_id']
 
     if cat >= 1 and cat <= 11:
@@ -55,12 +59,13 @@ for ant in tqdm(annotations):
     elif cat >= 84 and cat <= 90:
         cat = cat - 11
 
-    name_box_id[name].append([ant['bbox'], cat])
+    name_box_id[id].append([ant['bbox'], cat])
 
 """write to txt"""
 with open(output_path, 'w') as f:
     for key in tqdm(name_box_id.keys()):
-        f.write(key)
+        f.write(str(key) + ' ')
+        f.write(id_name[key])
         box_infos = name_box_id[key]
         for info in box_infos:
             x_min = int(info[0][0])

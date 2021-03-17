@@ -255,13 +255,16 @@ class Yolo_dataset(Dataset):
         self.train = train
 
         truth = {}
+        ids = {}
         f = open(lable_path, 'r', encoding='utf-8')
         for line in f.readlines():
             data = line.split(" ")
-            truth[data[0]] = []
-            for i in data[1:]:
-                truth[data[0]].append([int(float(j)) for j in i.split(',')])  # Directories must NOT have spaces or this breaks
+            truth[data[1]] = []
+            for i in data[2:]:
+                truth[data[1]].append([int(float(j)) for j in i.split(',')])  # Directories must NOT have spaces or this breaks
+            ids[data[1]] = int(data[0])
 
+        self.ids = ids
         self.truth = truth
         self.imgs = list(self.truth.keys())
 
@@ -295,8 +298,13 @@ class Yolo_dataset(Dataset):
                 img_path = random.choice(list(self.truth.keys()))
                 bboxes = np.array(self.truth.get(img_path), dtype=np.float)
                 #img_path = os.path.join(self.cfg.dataset_dir, img_path)
-            img = cv2.imread(img_path)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            try:
+                img = cv2.imread(img_path)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            except Exception as e:
+                print(img)
+                print(img_path)
+                raise Exception(e)
             if img is None:
                 continue
             oh, ow, oc = img.shape
@@ -406,7 +414,7 @@ class Yolo_dataset(Dataset):
         boxes[..., 2:] = boxes[..., 2:] - boxes[..., :2]  # box width, box height
         target['boxes'] = torch.as_tensor(boxes, dtype=torch.float32)
         target['labels'] = torch.as_tensor(bboxes_with_cls_id[...,-1].flatten(), dtype=torch.int64)
-        target['image_id'] = torch.tensor([get_image_id(img_path)])
+        target['image_id'] = torch.tensor([self.ids[img_path]])
         target['area'] = (target['boxes'][:,3])*(target['boxes'][:,2])
         target['iscrowd'] = torch.zeros((num_objs,), dtype=torch.int64)
         return img, target

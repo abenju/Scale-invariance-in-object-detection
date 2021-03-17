@@ -32,8 +32,8 @@ with open(json_file_path, encoding='utf-8') as f:
 database = data['db']
 
 
-lines = []
 frames = []
+id_counter = 0
 
 """Etract all annotations into a list"""
 for videoname in tqdm(database.keys()):
@@ -58,7 +58,8 @@ for videoname in tqdm(database.keys()):
                 label = anno['agent_ids'][0]
                 box_info = " %d,%d,%d,%d,%d" % (x1, y1, x2, y2, label)
                 annotations.append(box_info)
-            frames.append([file_path] + annotations)  # All frames in same list to shuffle (only relevant annotation)
+            id_counter += 1
+            frames.append([str(id_counter) + ' '] + [file_path] + annotations)  # All frames in same list to shuffle (only relevant annotation)
 
 
 """Shuffle and split data"""

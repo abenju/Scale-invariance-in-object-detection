@@ -36,16 +36,18 @@ random.seed(4)
 """Get all the annotation data from subdirectories"""
 subdirs = [f.path for f in os.scandir(master_data_dir) if f.is_dir()]
 lines = []
+id_counter = 0
 
 for dir in subdirs:  # for each subgroup of images
     annotation_dir = os.path.join(dir, annotation_dirs_name)
     files = [f for f in os.listdir(annotation_dir) if f.endswith('.json')]
     for file in tqdm(files):  # for each annotation file (image)
+        id_counter += 1
         """Load json data"""
         with open(os.path.join(annotation_dir, file), encoding='utf-8') as f:
             data = json.load(f)
         image_path = os.path.join(dir, image_dirs_name, file.replace('.json', ''))  #reverse engineer the image path from the annotation path
-        line = [image_path]  # image path is always the first element
+        line = [str(id_counter) + ' ', image_path]  #id and image path is always the first element
 
         for object in data['objects']:  # for each annotation
             if object['classTitle'] in accepted_labels.keys():  # filters object with labels we don't want
@@ -57,7 +59,7 @@ for dir in subdirs:  # for each subgroup of images
                 y2 = points[1][1]
 
                 line.append(" %d,%d,%d,%d,%d" % (x1, y1, x2, y2, label))
-        if len(line) > 1:
+        if len(line) > 2:
             lines.append(line)
 
 
