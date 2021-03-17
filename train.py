@@ -310,7 +310,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
         Optimizer:       {config.TRAIN_OPTIMIZER}
         Dataset classes: {config.classes}
         Train label path:{config.train_label}
-        Pretrained:
+        Pretrained:      {config.pretrained}
     ''')
 
     # learning rate setup
@@ -604,6 +604,9 @@ if __name__ == "__main__":
         model = Darknet(cfg.cfgfile)
     else:
         model = Yolov4.Yolov4(cfg.pretrained, n_classes=cfg.classes)
+
+    if cfg.load:
+        model.load_state_dict(torch.load(cfg.load))
 
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
