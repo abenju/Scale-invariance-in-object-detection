@@ -275,7 +275,7 @@ def collate(batch):
     return images, bboxes
 
 
-def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=20, img_scale=0.5):
+def train(model, device, config, epochs=5, start_epoch=0, batch_size=1, save_cp=True, log_step=20, img_scale=0.5):
     train_dataset = Yolo_dataset(config.train_label, config, train=True)
     val_dataset = Yolo_dataset(config.val_label, config, train=False)
 
@@ -350,7 +350,15 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     saved_models = deque()
     model.train()
     torch.cuda.empty_cache()
-    for epoch in range(epochs):
+
+    if start_epoch > 0:
+        global_step = start_epoch * n_train
+        for i in range(global_step//config.subdivisions):
+            optimizer.step()
+            scheduler.step()
+        model.zero_grad()
+
+    for epoch in range(start_epoch, epochs):
         # model.train()
         epoch_loss = 0
         epoch_step = 0
@@ -544,6 +552,8 @@ def get_args(**kwargs):
         '-keep-checkpoints-max', type=int, default=10,
         help='maximum number of checkpoints to keep. If set 0, all checkpoints will be kept',
         dest='keep_checkpoint_max')
+    parser.add_argument('--RESUME', default=0,
+                        type=int, help='Resume from given epoch', dest='resume')
     args = vars(parser.parse_args())
 
     # for k in args.keys():
@@ -603,19 +613,24 @@ if __name__ == "__main__":
     if cfg.use_darknet_cfg:
         model = Darknet(cfg.cfgfile)
     else:
-        model = Yolov4.Yolov4(cfg.pretrained, n_classes=cfg.classes)
-
-    if cfg.load:
-        model.load_state_dict(torch.load(cfg.load))
+        model = Yolov4.Yolov4(cfg.pretrained, n_classes=cfg.classes, freeze_backbone=cfg.pretrained is not None)
 
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
     model.to(device=device)
 
+    if cfg.load:
+        model.load_state_dict(torch.load(cfg.load))
+
+    if cfg.resume > 0:
+        resume_path = os.path.join(cfg.checkpoints, f'{cfg.save_prefix}{cfg.resume}.pth')
+        model.load_state_dict(torch.load(resume_path))
+
     try:
         train(model=model,
               config=cfg,
               epochs=cfg.TRAIN_EPOCHS,
+              start_epoch=cfg.resume,
               device=device, )
     except KeyboardInterrupt:
         torch.save(model.state_dict(), 'INTERRUPTED.pth')
