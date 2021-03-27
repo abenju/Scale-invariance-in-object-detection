@@ -1,1 +1,0 @@
-2021-02-25 23:53:23,697 train.py[line:597] INFO: Using device cpu
