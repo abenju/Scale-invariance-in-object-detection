@@ -12,7 +12,7 @@ from tqdm import tqdm
 from models.experimental import attempt_load
 from utils.datasets import create_dataloader
 from utils.general import coco80_to_coco91_class, check_dataset, check_file, check_img_size, check_requirements, \
-    box_iou, non_max_suppression, scale_coords, xyxy2xywh, xywh2xyxy, set_logging, increment_path, colorstr
+    box_area, box_iou, non_max_suppression, scale_coords, xyxy2xywh, xywh2xyxy, set_logging, increment_path, colorstr
 from utils.metrics import ap_per_class, ConfusionMatrix
 from utils.plots import plot_images, output_to_target, plot_study_txt
 from utils.torch_utils import select_device, time_synchronized
@@ -37,6 +37,8 @@ def test(data,
          plots=True,
          wandb_logger=None,
          compute_loss=None,
+         small=32,
+         medium=96,
          is_coco=False):
     # Initialize/load model and set device
     training = model is not None
@@ -130,7 +132,7 @@ def test(data,
 
             if len(pred) == 0:
                 if nl:
-                    stats.append((torch.zeros(0, niou, dtype=torch.bool), torch.Tensor(), torch.Tensor(), tcls))
+                    stats.append((torch.zeros(0, niou, dtype=torch.bool), torch.Tensor(), torch.Tensor(), tcls, torch.Tensor(), torch.Tensor()))
                 continue
 
             # Predictions
@@ -172,6 +174,8 @@ def test(data,
 
             # Assign all predictions as incorrect
             correct = torch.zeros(pred.shape[0], niou, dtype=torch.bool, device=device)
+            areas = torch.zeros(pred.shape[0], 2, device=device)
+            gt_areas = torch.zeros(labels.shape[0], 1, device=device)
             if nl:
                 detected = []  # target indices
                 tcls_tensor = labels[:, 0]
@@ -182,6 +186,12 @@ def test(data,
                 if plots:
                     confusion_matrix.process_batch(predn, torch.cat((labels[:, 0:1], tbox), 1))
 
+                for idx, row in enumerate(predn[:, :4]):
+                    areas[idx, 0] = box_area(row) 
+
+                for idx, row in enumerate(tbox[:]):
+                    gt_areas[idx, 0] = box_area(row)
+
                 # Per target class
                 for cls in torch.unique(tcls_tensor):
                     ti = (cls == tcls_tensor).nonzero(as_tuple=False).view(-1)  # prediction indices
@@ -190,21 +200,23 @@ def test(data,
                     # Search for detections
                     if pi.shape[0]:
                         # Prediction to target ious
-                        ious, i = box_iou(predn[pi, :4], tbox[ti]).max(1)  # best ious, indices
+                        ious, i = box_iou(predn[pi, :4], tbox[ti]).max(1)  # best ious, indices. do IOUs, retrn max iou and the gt index to which it belongs
 
                         # Append detections
                         detected_set = set()
-                        for j in (ious > iouv[0]).nonzero(as_tuple=False):
+                        for j in (ious > iouv[0]).nonzero(as_tuple=False):  # TODO: somewhere here I need to extract the extra values
                             d = ti[i[j]]  # detected target
                             if d.item() not in detected_set:
                                 detected_set.add(d.item())
                                 detected.append(d)
                                 correct[pi[j]] = ious[j] > iouv  # iou_thres is 1xn
+                                tmp=tbox[d,:][0]
+                                areas[pi[j], 1] = box_area(tbox[d,:][0])
                                 if len(detected) == nl:  # all targets already located in image
                                     break
 
             # Append statistics (correct, conf, pcls, tcls)
-            stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
+            stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls, areas.cpu(), gt_areas.cpu()))
 
         # Plot images
         if plots and batch_i < 3:
@@ -215,11 +227,15 @@ def test(data,
 
     # Compute statistics
     stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
+    areas = stats[4]
+    gt_areas = stats[5]
+    stats = stats[:4]
     if len(stats) and stats[0].any():
         p, r, ap, f1, ap_class = ap_per_class(*stats, plot=plots, save_dir=save_dir, names=names)
         ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
         mp, mr, map50, map = p.mean(), r.mean(), ap50.mean(), ap.mean()
         nt = np.bincount(stats[3].astype(np.int64), minlength=nc)  # number of targets per class
+
     else:
         nt = torch.zeros(1)
 
@@ -231,6 +247,42 @@ def test(data,
     if (verbose or (nc < 50 and not training)) and nc > 1 and len(stats):
         for i, c in enumerate(ap_class):
             print(pf % (names[c], seen, nt[c], p[i], r[i], ap50[i], ap[i]))
+
+    if len(stats) and stats[0].any():
+        #  Statistics for each scale
+        bottom = 0
+        top = 1e5 ** 2
+        small_thr = small ** 2
+        large_thr = medium ** 2
+        area_thrs = [(bottom, small_thr), (small_thr, large_thr), (large_thr, top)]
+        tags = ['Small', 'Medium', 'Large']
+
+        for idx, area in enumerate(area_thrs):
+            #  matched predictions  
+            gt_in = np.where(np.logical_and(np.greater_equal(gt_areas[:], area[0]), np.less_equal(gt_areas[:], area[1])))[0]
+            pred_in = np.where(np.logical_or(np.logical_and(np.greater(areas[:,1], 0), np.logical_and(np.greater_equal(areas[:,1], area[0]), np.less_equal(areas[:,1], area[1]))), np.logical_and(np.greater_equal(areas[:,0], area[0]), np.less_equal(areas[:,0], area[1]))))[0]
+
+            tp = stats[0][pred_in]
+            conf = stats[1][pred_in]
+            pred_cls = stats[2][pred_in]
+            target_cls = stats[3][gt_in]
+
+            p, r, ap, f1, ap_class = ap_per_class(tp, conf, pred_cls, target_cls, plot=plots, save_dir=save_dir, names=names, file_suffix='_'+tags[idx])
+            ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
+            mp, mr, map50, map = p.mean(), r.mean(), ap50.mean(), ap.mean()
+            nt = np.bincount(target_cls.astype(np.int64), minlength=nc)
+
+            # Print results
+            print('{} objects'.format(tags[idx]))
+            print(pf % ('all', -1, len(gt_in), mp, mr, map50, map))
+
+            # Print results per class
+            if (verbose or (nc < 50 and not training)) and nc > 1 and len(stats):
+                for i, c in enumerate(ap_class):
+                    print(pf % (names[c], -1, nt[c], p[i], r[i], ap50[i], ap[i]))
+    
+
+    
 
     # Print speeds
     t = tuple(x / seen * 1E3 for x in (t0, t1, t0 + t1)) + (imgsz, imgsz, batch_size)  # tuple
@@ -258,6 +310,7 @@ def test(data,
         try:  # https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocoEvalDemo.ipynb
             from pycocotools.coco import COCO
             from pycocotools.cocoeval import COCOeval
+            from utils.coco_utils import CustomCOCOeval
 
             anno = COCO(anno_json)  # init annotations api
             pred = anno.loadRes(pred_json)  # init predictions api
@@ -302,6 +355,8 @@ if __name__ == '__main__':
     parser.add_argument('--project', default='runs/test', help='save to project/name')
     parser.add_argument('--name', default='exp', help='save to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
+    parser.add_argument('--small', type=float, default=32, help='upper threshold for small objects and lower for medium')
+    parser.add_argument('--medium', type=float, default=96, help='lower threshold for large objects and upper for medium')
     opt = parser.parse_args()
     opt.save_json |= opt.data.endswith('coco.yaml')
     opt.data = check_file(opt.data)  # check file
@@ -322,6 +377,8 @@ if __name__ == '__main__':
              save_txt=opt.save_txt | opt.save_hybrid,
              save_hybrid=opt.save_hybrid,
              save_conf=opt.save_conf,
+             small=opt.small,
+             medium=opt.medium,
              )
 
     elif opt.task == 'speed':  # speed benchmarks

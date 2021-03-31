@@ -360,7 +360,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                     # f = list(p.rglob('**/*.*'))  # pathlib
                 elif p.is_file():  # file
                     with open(p, 'r') as t:
-                        t = t.read().strip().splitlines()
+                        t = t.read().strip().splitlines()  # If I want to ad img_id, here is the place
                         parent = str(p.parent) + os.sep
                         f += [x.replace('./', parent) if x.startswith('./') else x for x in t]  # local to global path
                         # f += [p.parent / x.lstrip(os.sep) for x in t]  # local to global path (pathlib)
