@@ -267,19 +267,20 @@ def test(data,
             pred_cls = stats[2][pred_in]
             target_cls = stats[3][gt_in]
 
-            p, r, ap, f1, ap_class = ap_per_class(tp, conf, pred_cls, target_cls, plot=plots, save_dir=save_dir, names=names, file_suffix='_'+tags[idx])
-            ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
-            mp, mr, map50, map = p.mean(), r.mean(), ap50.mean(), ap.mean()
-            nt = np.bincount(target_cls.astype(np.int64), minlength=nc)
+            a_p, a_r, a_ap, a_f1, a_ap_class = ap_per_class(tp, conf, pred_cls, target_cls, plot=plots, save_dir=save_dir, names=names, file_suffix='_'+tags[idx])
+            a_ap50, a_ap = a_ap[:, 0], a_ap.mean(1)  # AP@0.5, AP@0.5:0.95
+            a_mp, a_mr, a_map50, a_map = a_p.mean(), a_r.mean(), a_ap50.mean(), a_ap.mean()
+            a_nt = np.bincount(target_cls.astype(np.int64), minlength=nc)
 
             # Print results
+            print('')
             print('{} objects'.format(tags[idx]))
-            print(pf % ('all', -1, len(gt_in), mp, mr, map50, map))
+            print(pf % ('all', -1, len(gt_in), a_mp, a_mr, a_map50, a_map))
 
             # Print results per class
             if (verbose or (nc < 50 and not training)) and nc > 1 and len(stats):
-                for i, c in enumerate(ap_class):
-                    print(pf % (names[c], -1, nt[c], p[i], r[i], ap50[i], ap[i]))
+                for i, c in enumerate(a_ap_class):
+                    print(pf % (names[c], -1, a_nt[c], a_p[i], a_r[i], a_ap50[i], a_ap[i]))
     
 
     
