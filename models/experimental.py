@@ -132,3 +132,44 @@ def attempt_load(weights, map_location=None):
         for k in ['names', 'stride']:
             setattr(model, k, getattr(model[-1], k))
         return model  # return ensemble
+
+class ResnetBottleneck(nn.Module):
+    # Deeper Bottleneck as used in resnet 50/101/152
+    def __init__(self, c1, c2, s=1, g=1, e=4, act=nn.ReLU(inplace=True)):  # ch_in, ch_out, stride, groups, expansion, activation
+        super(ResnetBottleneck, self).__init__()
+        c_ = int(c2 // e)  # hidden channels
+        self.cv1 = Conv(c1, c_, 1, 1, act=act)
+        self.cv2 = Conv(c_, c_, 3, s, g=g, act=act)
+        self.conv = nn.Conv2d(c_, c2, 1, 1, bias=False)
+        self.bn = nn.BatchNorm2d(c2)
+        self.act = act
+        self.down = None
+        if s != 1 or c1 != c2:
+            self.down = nn.Sequential(
+                nn.Conv2d(c1, c2, kernel_size=1, stride=s, bias=False),
+                nn.BatchNorm2d(c2)
+            )
+
+
+    def forward(self, x):
+        out = self.cv1(x)
+        out = self.cv2(out)
+        out = self.conv(out)
+        out = self.bn(out)
+        identity = self.down(x) if self.down is not None else x
+        out += identity
+        return self.act(out)
+
+class ResNetBlock(nn.Module):
+    def __init__(self, c1, c2, n=1, downsample=True, shortcut=True, g=1, e=4):  # ch_in, ch_out, number, shortcut, groups, expansion
+        super(ResNetBlock, self).__init__()
+        c_ = int(c2 // e)  # hidden channels
+        s = 2 if downsample else 1
+        if n > 1:
+            self.m = nn.Sequential(*[ResnetBottleneck(c1, c2, s)]+[ResnetBottleneck(c2, c2) for _ in range(n-1)])
+        else:
+            self.m = ResnetBottleneck(c1, c2, s)
+        # self.m = nn.Sequential(*[CrossConv(c_, c_, 3, 1, g, 1.0, shortcut) for _ in range(n)])
+
+    def forward(self, x):
+        return self.m(x)
