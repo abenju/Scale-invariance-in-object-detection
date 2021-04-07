@@ -174,8 +174,8 @@ def test(data,
 
             # Assign all predictions as incorrect
             correct = torch.zeros(pred.shape[0], niou, dtype=torch.bool, device=device)
-            areas = torch.zeros(pred.shape[0], 2, device=device)
-            gt_areas = torch.zeros(labels.shape[0], 1, device=device)
+            areas = torch.zeros(pred.shape[0], 2, device=device, dtype=torch.float32)
+            gt_areas = torch.zeros(labels.shape[0], 1, device=device, dtype=torch.float32)
             if nl:
                 detected = []  # target indices
                 tcls_tensor = labels[:, 0]
@@ -226,7 +226,14 @@ def test(data,
             Thread(target=plot_images, args=(img, output_to_target(out), paths, f, names), daemon=True).start()
 
     # Compute statistics
-    stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
+    #stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
+    tmp = []
+    for i, x in enumerate(zip(*stats)):
+        #x=x[482:484]
+        if i >= 4:
+            x = [y if y.shape[0] > 0 else torch.zeros(0,2 if i == 4 else 1) for y in x]
+        tmp.append(np.concatenate(x, 0))
+    stats = tmp
     areas = stats[4]
     gt_areas = stats[5]
     stats = stats[:4]
