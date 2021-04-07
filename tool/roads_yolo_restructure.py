@@ -8,6 +8,7 @@ import random
 random.seed(4)
 
 ignore_unannotated = True
+sample_step = 8
 
 json_file_path = '/mnt/mars-alpha/aduen/roads/annots_12fps_full_v1.0.json'
 images_dir_path = '/mnt/mars-alpha/aduen/roads/images'
@@ -88,6 +89,7 @@ for frame in tqdm(frames):
 """write collection files"""
 for split in splits:  # Write multiple files
     with open(split[0], 'w') as f:
-        for line in tqdm(split[1]):
-            f.write(line['file_path'])
-            f.write('\n')
+        for i, line in tqdm(enumerate(split[1])):
+            if i % sample_step == 0:
+                f.write(line['file_path'])
+                f.write('\n')
