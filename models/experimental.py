@@ -173,3 +173,48 @@ class ResNetBlock(nn.Module):
 
     def forward(self, x):
         return self.m(x)
+
+
+class DenseNetBottleneck(nn.Module):
+    def __init__(self, c1, c2):
+        super(DenseNetBottleneck, self).__init__()
+        c_ = 4 * c2
+        self.bn1 = nn.BatchNorm2d(c1)
+        self.conv1 = nn.Conv2d(c1, c_, kernel_size=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(c_)
+        self.conv2 = nn.Conv2d(c_, c2, kernel_size=3, padding=1, bias=False)
+
+    def forward(self, x):
+        out = self.conv1(nn.functional.relu(self.bn1(x)))
+        out = self.conv2(nn.functional.relu(self.bn2(out)))
+        out = torch.cat((x, out), 1)
+        return out
+
+class DenseNetTrasition(nn.Module):
+    def __init__(self, c1, c2):
+        super(DenseNetTrasition, self).__init__()
+        
+        self.conv1 = nn.Conv2d(c1, c2, kernel_size=1, bias=False)
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = nn.functional.avg_pool2d(out, 2)
+        return out
+
+class DenseBlock(nn.Module):
+    def __init__(self, c1, c2, n):
+        super(DenseBlock, self).__init__()
+        k = (c2 - c1) // n  # growth factor
+        c_ = c1
+        layers = []
+        for i in range(n):
+            layers.append(DenseNetBottleneck(c_, k))
+            c_ += k
+
+        self.m = nn.Sequential(*layers)
+        self.bn = nn.BatchNorm2d(c2)
+    
+    def forward(self, x):
+        out = self.m(x)
+        out = self.bn(out)
+        return nn.functional.relu(out)

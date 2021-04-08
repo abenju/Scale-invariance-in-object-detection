@@ -15,7 +15,7 @@ backbone:
   [-1, 3, ResNetBlock, [256, False]], # Conv2 /4
   [-1, 4, ResNetBlock, [512]], # Conv3 /8
   [-1, 6, ResNetBlock, [1024]], # Conv4 /16
-  [-1, 3, ResNetBlock, [2048]], # Conv4 /32
+  [-1, 3, ResNetBlock, [2048]], # Conv5 /32
   [-1, 1, SPP, [2048, [5, 9, 13]]],
   [-1, 3, C3, [2048, False]],  # 9
   ]
