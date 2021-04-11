@@ -8,16 +8,16 @@ import random
 """hyper parameters"""
 ignore_unannotated = True
 
-json_file_path = 'D:/Downloads/annots_12fps_full_v1.01111.json'
-images_dir_path = 'D:/Downloads/rgb-images'
+json_file_path = 'D:/Documents/pythonProject/road-dataset/road/road_trainval_v1.0.json'
+images_dir_path = 'D:\\Documents\\pythonProject\\road-dataset\\road\\rgb-images'
 output_train_path = '../data/roads_train.txt'
 output_test_path = '../data/roads_test.txt'
 output_val_path = '../data/roads_val.txt'
 
 split_ratios = {  # ratios to split entire dataset. Values must equal sum up to 1
-    output_train_path: 0.7,
-    output_test_path: 0.15,
-    output_val_path: 0.15,
+    output_train_path: 0.6,
+    output_test_path: 0.2,
+    output_val_path: 0.2,
 }
 
 random.seed(4)
@@ -41,7 +41,7 @@ for videoname in tqdm(database.keys()):
 
         frame = database[videoname]['frames'][frame_id]
         if frame['annotated'] > 0 and (not ignore_unannotated or len(frame['annos']) > 0):  # filter frames
-            file_name = "{:08}.jpg".format(int(frame_id))
+            file_name = "{:05}.jpg".format(int(frame_id))  # on release, image names have 5 digits
             file_path = os.path.join(images_dir_path, videoname, file_name)
 
             width, height = frame['width'], frame['height']
